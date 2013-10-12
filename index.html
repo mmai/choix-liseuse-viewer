@@ -1,0 +1,81 @@
+<html>
+    <head>
+        <link href="bootstrap.min.css" rel="stylesheet">
+        <link href="theme.bootstrap.css" rel="stylesheet">
+
+        <script src="http://codeorigin.jquery.com/jquery-2.0.3.min.js"></script>
+
+        <script type="text/javascript" src="jquery.tablesorter.min.js"></script>
+        <script type="text/javascript" src="jquery.tablesorter.widgets.min.js"></script>
+
+        <script language="javascript">
+            edas_url = "https://api.github.com/repos/edas/choix-liseuse/contents";
+            $(document).ready(function() {
+                readers_list = [];
+                $.ajax({
+                    type: "GET",
+                    url: edas_url + "/lib/readers",
+                    dataType: "json",
+                    success: function(result) {
+                        var defereds = [];
+                        for( i in result ) {
+                            if (result[i].type === 'file'){
+                                url = edas_url + result[i].path;
+                                defereds.push(
+                                    $.ajax({
+                                        type: "GET",
+                                        url : url,
+                                        dataType: "json",
+                                        success: function(res) {
+                                            json = atob(res.content.replace(/\s/g, ''));
+                                            readers_list.push(JSON.parse(json));
+                                        } 
+                                    })
+                                );
+                            }
+                        }
+                        $.when.apply($, defereds).done(function(){
+                            var features = readers_list[0].features;
+                            //Features
+                            infos = "<td></td><th>Prix</th>";
+                            for (feature in features){
+                                infos += "<th>" + feature + "</th>"
+                            }
+                            $('#readers_list_head').append("<tr>" + infos + "</tr>");
+
+                            //Values
+                            for (i in readers_list){
+                                reader = readers_list[i];
+                                infos = "<th>" + reader.name + "</th><td>" + reader.price + "</td>";
+                                for (feature in features){
+                                    val = reader.features[feature];
+                                    bgcolor = "white";
+                                    if (val === 1){
+                                        bgcolor = "green";
+                                    } else if (val === 0) {
+                                        bgcolor = "red";
+                                    }
+                                    infos += "<td style='background-color:"+ bgcolor + "'>" + val + "</td>"
+                                }
+                                $('#readers_list_body').append("<tr>" + infos + "</tr>");
+                            }
+                            $("#readers_list").tablesorter({
+                                theme : 'bootstrap',
+                                headerTemplate: '{content} {icon}',
+                                widgets    : ['zebra','columns', 'uitheme']
+                            });
+                        })
+                    }
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <p>Ce tableau reprend les donn&eacute;es brutes utilis&eacute;es dans l'outil <a href="http://liseuses.survol.fr/">Choisir sa liseuse ebook</a> d'Eric Daspet</p>
+
+        <table id="readers_list" >
+            <thead id="readers_list_head"></thead>
+            <tbody id="readers_list_body"></tbody>
+        </table>
+    </body>
+</html>
